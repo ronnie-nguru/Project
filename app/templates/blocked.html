@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block app_content %}
+  <h1>Blocked Users</h1>
+  {% if blocked_users %}
+    <ul class="list-group">
+      {% for blocked_user in blocked_users %}
+        <li class="list-group-item">
+          {{ blocked_user.username }} (ID: {{ blocked_user.id }})
+          <form action="{{ url_for('main.unblock_user', user_id=blocked_user.id) }}" method="post" class="d-inline">
+            <button type="submit" class="btn btn-secondary btn-sm">Unblock</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No users blocked.</p>
+  {% endif %}
+  <h1>Unblocked Users</h1>
+  {% if unblocked_users %}
+    <ul class="list-group">
+      {% for unblocked_user in unblocked_users %}
+        <li class="list-group-item">
+          {{ unblocked_user.username }} (ID: {{ unblocked_user.id }})
+          <form action="{{ url_for('main.block_user', user_id=unblocked_user.id) }}" method="post" class="d-inline">
+            <button type="submit" class="btn btn-secondary btn-sm">Block</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No users blocked.</p>
+  {% endif %}
+{% endblock %}

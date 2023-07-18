@@ -1,0 +1,133 @@
+{% extends 'bootstrap/base.html' %}
+
+{% block title %}
+{% if title %}{{ title }} - Ronnie's Fast Chat{% else %}Welcome to Ronnie's Fast Chat{% endif %}
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-dark bg-dark">
+	<div class="container">
+		<div class="navbar-header">
+			<a class="navbar-brand" href="/">Ronnie's Fast Chat</a>
+		</div>
+		<div class="navbar-collapse collapse">
+			<ul class="nav navbar-nav">
+				{% if current_user.is_authenticated %}
+				<li class="nav-item"><a class="nav-link" href="{{ url_for('main.index')}}">Chat</a></li>
+				<li class="nav-item"><a class="nav-link" href="{{ url_for('main.pending_requests')}}">Requests</a></li>
+				<li class="nav-item"><a class="nav-link" href="{{url_for('main.add_association')}}">Add User</a></li>
+				<li class="nav-item"><a class="nav-link" href="{{ url_for('main.blocked')}}">Blocked Users</a></li>
+				{% endif %}
+			</ul>
+			<ul class="nav navbar-nav navbar-right">
+				{% if current_user.is_authenticated %}
+				<li class="nav-item"><a class="nav-link" href="{{ url_for('main.user', username = current_user.username) }}"><i class="fas fa-user"></i> Profile</a></li>
+				<li class="nav-item"><a class="nav-link" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+				{% else %}
+				<li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+				<li class="nav-item"><a class="nav-link" href="{{ url_for('auth.register') }}"><i class="fas fa-user-plus"></i> Sign Up</a></li>
+				{% endif %}
+			</ul>
+		</div>
+	</div>
+</nav>
+
+<div class="container">
+	{% with messages = get_flashed_messages() %}
+	{% if messages %}
+	{% for message in messages %}
+	<div class="alert alert-info" role="alert" style="margin-top: 10px;">{{ message }}</div>
+	{% endfor %}
+	{% endif %}
+	{% endwith %}
+
+	{% block app_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ moment.include_moment() }}
+{{ moment.lang(g.locale) }}
+<script>
+	function translate(sourceElem, destElem, sourceLang, destLang) {
+			$(destElem).html('<img src="{{ url_for('static', filename='loading.gif') }}">');
+			$.post('/translate', {
+					text: $(sourceElem).text(),
+					source_language: sourceLang,
+					dest_language: destLang
+				}).done(function(response) {
+						$(destElem).text(response['text'])
+					}).fail(function() {
+							$(destElem).text("Error: Could not contact server.");
+						});
+		}
+	$(function () {
+			var timer = null;
+			var xhr = null;
+			$('.user_popup').hover(
+					function(event) {
+							// mouse in event handler
+							var elem = $(event.currentTarget);
+							timer = setTimeout(function() {
+									timer = null;
+									xhr = $.ajax(
+											'/user/' + elem.first().text().trim() + '/popup').done(
+													function(data) {
+															xhr = null;
+															elem.popover({
+																	trigger: 'manual',
+																	html: true,
+																	animation: false,
+																	container: elem,
+																	content: data
+																}).popover('show');
+															flask_moment_render_all();
+														}
+												);
+								}, 1000);
+						},
+					function(event) {
+							// mouse out event handler
+							var elem = $(event.currentTarget);
+							if (timer) {
+									clearTimeout(timer);
+									timer = null;
+								}
+							else if (xhr) {
+									xhr.abort();
+									xhr = null;
+								}
+							else {
+									elem.popover('destroy');
+								}
+						}
+				);
+		});
+	function set_message_count(n) {
+			$('#message_count').text(n);
+			$('#message_count').css('visibility', n ? 'visible' : 'hidden');
+		}
+	{% if current_user.is_authenticated %}
+	$(function() {
+			var since = 0;
+			setInterval(function() {
+					$.ajax('{{ url_for('main.notifications') }}?since=' + since).done(
+							function(notifications) {
+									for (var i = 0; i < notifications.length; i++) {
+											if (notifications[i].name == 'unread_message_count')
+												set_message_count(notifications[i].data);
+											since = notifications[i].timestamp;
+										}
+								}
+						);
+				}, 10000);
+		});
+	{% endif %}
+</script>
+{% endblock %}
